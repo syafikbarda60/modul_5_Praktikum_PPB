@@ -140,3 +140,5 @@ export default function RecipeCard({ recipe, onRecipeClick }) {
     </div>
   );
 }
+
+//fix namanya jangan beda
