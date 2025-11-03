@@ -3,8 +3,9 @@ import { useState, useEffect } from "react";
 import { Heart, Loader, Trash2, AlertCircle, RefreshCw } from "lucide-react";
 import { useLocalFavorites } from "../hooks/useFavorites";
 import recipeService from "../services/recipeService";
-//import RecipeCard from "../components/common/RecipeCard";
+import RecipeCard from "../components/common/RecipeCard";
 
+// C:\file kuliah\file praktek\PRAK PBO\modul-lima\modul5\modul-lima\src\components\common\RecipeCard.jsx
 // import RecipeCard from "../components/common/RecipeCard";
 
 export default function FavoritePage({ onRecipeClick }) {
