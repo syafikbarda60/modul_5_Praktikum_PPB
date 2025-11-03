@@ -1,4 +1,4 @@
-// src/pages/EditRecipePage.jsx
+// src/pages/EditRecipePage.jsx - FIXED VERSION
 import { useState, useEffect } from "react";
 import {
   ArrowLeft,
@@ -39,10 +39,14 @@ export default function EditRecipePage({ recipeId, onBack, onSuccess }) {
     const loadRecipe = async () => {
       try {
         setLoading(true);
+        console.log("📥 Loading recipe:", recipeId);
+
         const result = await recipeService.getRecipeById(recipeId);
 
         if (result.success) {
           const recipe = result.data;
+          console.log("✅ Recipe loaded:", recipe);
+
           setFormData({
             name: recipe.name || "",
             category: recipe.category || "makanan",
@@ -65,11 +69,12 @@ export default function EditRecipePage({ recipeId, onBack, onSuccess }) {
           let stepsArray = [""];
           if (recipe.steps && recipe.steps.length > 0) {
             stepsArray = recipe.steps.map((step) => {
-              // If step is an object with a 'step' property, extract it
+              if (typeof step === "object" && step.instruction) {
+                return step.instruction;
+              }
               if (typeof step === "object" && step.step) {
                 return step.step;
               }
-              // If step is already a string, use it
               return typeof step === "string" ? step : "";
             });
           }
@@ -78,6 +83,7 @@ export default function EditRecipePage({ recipeId, onBack, onSuccess }) {
           throw new Error("Gagal memuat data resep");
         }
       } catch (err) {
+        console.error("❌ Error loading recipe:", err);
         setError(err.message || "Terjadi kesalahan saat memuat resep");
       } finally {
         setLoading(false);
@@ -207,16 +213,15 @@ export default function EditRecipePage({ recipeId, onBack, onSuccess }) {
 
     // Validate steps
     const validSteps = steps.filter((step) => {
-      // Ensure step is a string before calling trim
       if (typeof step === "string") {
         return step.trim();
       }
-      // If step is an object, check if it has a 'step' property
       if (typeof step === "object" && step.step) {
         return step.step.trim();
       }
       return false;
     });
+
     if (validSteps.length === 0) {
       setError("Minimal harus ada 1 langkah");
       return false;
@@ -225,7 +230,7 @@ export default function EditRecipePage({ recipeId, onBack, onSuccess }) {
     return true;
   };
 
-  // Submit form (PATCH - partial update)
+  // Submit form (PUT - full replacement) - PERBAIKAN UTAMA
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -237,62 +242,75 @@ export default function EditRecipePage({ recipeId, onBack, onSuccess }) {
     try {
       setUpdating(true);
 
-      // Prepare update data
-      const updateData = {};
+      // PERBAIKAN: Tentukan URL gambar final
+      let finalImageUrl = currentImageUrl; // Default: gunakan gambar yang ada
 
-      // Step 1: Upload new image if selected
+      // Step 1: Upload gambar BARU jika ada file yang dipilih
       if (imageFile) {
+        console.log("📤 Uploading new image...");
         setUploading(true);
+
         const uploadResult = await uploadService.uploadImage(imageFile);
+
         if (uploadResult.success) {
-          updateData.image_url = uploadResult.data.url;
+          finalImageUrl = uploadResult.data.url;
+          console.log("✅ New image uploaded:", finalImageUrl);
         } else {
           throw new Error("Gagal upload gambar");
         }
+
         setUploading(false);
-      } else if (!currentImageUrl && !imageFile) {
-        // If original image was removed and no new image
-        updateData.image_url = "";
+      }
+      // Handle jika gambar asli dihapus (currentImageUrl kosong dan tidak ada file baru)
+      else if (!currentImageUrl && !imageFile) {
+        finalImageUrl = "";
+        console.log("⚠️ No image provided");
+      }
+      // Jika tidak upload gambar baru dan currentImageUrl ada, gunakan currentImageUrl
+      else {
+        console.log("ℹ️ Keeping existing image:", currentImageUrl);
       }
 
-      // Step 2: Add other fields
+      // Step 2: Siapkan data LENGKAP untuk PUT request
       const validIngredients = ingredients.filter(
         (ing) => ing.name.trim() && ing.quantity.trim()
       );
+
       const validSteps = steps
         .filter((step) => {
-          if (typeof step === "string") {
-            return step.trim();
-          }
-          if (typeof step === "object" && step.step) {
-            return step.step.trim();
-          }
+          if (typeof step === "string") return step.trim();
+          if (typeof step === "object" && step.step) return step.step.trim();
           return false;
         })
         .map((step) => {
-          // Convert to string if it's an object
-          if (typeof step === "object" && step.step) {
-            return step.step;
-          }
-          return step;
+          // Pastikan semua step adalah string
+          return typeof step === "object" && step.step ? step.step : step;
         });
 
-      updateData.name = formData.name.trim();
-      updateData.category = formData.category;
-      updateData.description = formData.description.trim();
-      updateData.prep_time = parseInt(formData.prep_time);
-      updateData.cook_time = parseInt(formData.cook_time);
-      updateData.servings = parseInt(formData.servings);
-      updateData.difficulty = formData.difficulty;
-      updateData.is_featured = formData.is_featured;
-      updateData.ingredients = validIngredients;
-      updateData.steps = validSteps;
+      // PERBAIKAN: Buat objek data LENGKAP untuk PUT
+      const fullRecipeData = {
+        name: formData.name.trim(),
+        category: formData.category,
+        description: formData.description.trim(),
+        image_url: finalImageUrl, // <-- CRITICAL: Gunakan finalImageUrl
+        prep_time: parseInt(formData.prep_time),
+        cook_time: parseInt(formData.cook_time),
+        servings: parseInt(formData.servings),
+        difficulty: formData.difficulty,
+        is_featured: formData.is_featured,
+        ingredients: validIngredients,
+        steps: validSteps,
+      };
 
-      // Step 3: Update recipe using PUT
-      const result = await recipeService.updateRecipe(recipeId, updateData);
+      console.log("📝 Updating recipe with data:", fullRecipeData);
+
+      // Step 3: Update resep menggunakan PUT dengan data LENGKAP
+      const result = await recipeService.updateRecipe(recipeId, fullRecipeData);
 
       if (result.success) {
-        alert("Resep berhasil diperbarui!");
+        console.log("✅ Recipe updated successfully");
+        alert("✅ Resep berhasil diperbarui!");
+
         if (onSuccess) {
           onSuccess(result.data);
         } else if (onBack) {
@@ -302,6 +320,7 @@ export default function EditRecipePage({ recipeId, onBack, onSuccess }) {
         throw new Error(result.message || "Gagal memperbarui resep");
       }
     } catch (err) {
+      console.error("❌ Error updating recipe:", err);
       setError(err.message || "Terjadi kesalahan saat memperbarui resep");
     } finally {
       setUpdating(false);
