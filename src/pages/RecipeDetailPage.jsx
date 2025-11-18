@@ -10,6 +10,7 @@ import {
   getStarRating,
 } from "../utils/helpers";
 import { Heart, Clock, Users, ChefHat } from "lucide-react";
+import statsService from "../../services/statsService";
 
 export default function RecipeDetailPage({ recipeId, onBack }) {
   const {
@@ -43,6 +44,14 @@ export default function RecipeDetailPage({ recipeId, onBack }) {
 
     const result = await createReview(recipeId, reviewData);
     if (result) {
+      statsService.addUserReview({
+        id: result.data?.id,
+        recipeId: recipeId,
+        recipeName: recipe?.name,
+        rating: rating,
+        comment: comment.trim(),
+      });
+
       setComment("");
       setRating(5);
       refetchReviews();

@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import recipeService from "../services/recipeService";
 import uploadService from "../services/uploadService";
+import statsService from "../services/statsService";
 import {
   saveDraft,
   loadDraft,
@@ -311,6 +312,7 @@ export default function CreateRecipePage({ onBack, onSuccess }) {
       const result = await recipeService.createRecipe(recipeData);
 
       if (result.success) {
+        statsService.addUserRecipe(result.data);
         alert("Resep berhasil dibuat!");
         deleteDraft("create"); // Clear draft after successful creation
         if (onSuccess) {

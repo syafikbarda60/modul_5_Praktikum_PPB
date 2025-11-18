@@ -1,6 +1,7 @@
 // src/components/home/FeaturedMinumanSection.jsx
 import { Clock, Star, ChefHat, Coffee } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
+import LazyImage from "../common/LazyImage";
 
 export default function FeaturedMinumanSection({
   recipes,
@@ -113,7 +114,7 @@ export default function FeaturedMinumanSection({
               <div className="flex">
                 {/* Recipe Image */}
                 <div className="h-29 w-28 md:h-48 md:w-48 flex-shrink-0 overflow-hidden">
-                  <img
+                  <LazyImage
                     src={recipe.image_url}
                     alt={recipe.name}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"

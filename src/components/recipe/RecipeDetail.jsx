@@ -26,6 +26,8 @@ import FavoriteButton from "../common/FavoriteButton";
 import userService from "../../services/userService";
 import ShareButton from "../common/ShareButton";
 
+import statsService from "../../services/statsService";
+
 export default function RecipeDetail({
   recipeId,
   onBack,
@@ -93,6 +95,8 @@ export default function RecipeDetail({
     const success = await createReview(recipeId, reviewData);
 
     if (success) {
+      statsService.addUserReview(reviewData);
+
       setComment("");
       setRating(5);
       setShowReviewForm(false);
@@ -110,6 +114,8 @@ export default function RecipeDetail({
       const result = await recipeService.deleteRecipe(recipeId);
 
       if (result.success) {
+        statsService.removeUserRecipe(recipeId);
+
         alert("Resep berhasil dihapus!");
         setShowDeleteModal(false);
         if (onBack) {

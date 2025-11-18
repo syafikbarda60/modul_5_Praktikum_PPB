@@ -1,53 +1,44 @@
 // src/components/common/LazyImage.jsx
 import { useState, useEffect, useRef } from "react";
 
-/**
- * LazyImage Component - Lazy loading gambar dengan Intersection Observer
- * @param {string} src - URL gambar
- * @param {string} alt - Alt text
- * @param {string} className - CSS classes
- * @param {string} placeholderColor - Warna placeholder (default: slate-200)
- */
-export default function LazyImage({
-  src,
-  alt = "",
-  className = "",
-  placeholderColor = "bg-slate-200",
-  onLoad,
-}) {
+export default function LazyImage({ src, alt = "", className = "", onLoad }) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isInView, setIsInView] = useState(false);
+  const [shouldLoad, setShouldLoad] = useState(false);
   const imgRef = useRef(null);
   const observerRef = useRef(null);
 
   useEffect(() => {
-    // Check if IntersectionObserver is supported
     if (!("IntersectionObserver" in window)) {
-      // Fallback: load image immediately if not supported
-      setIsInView(true);
+      setShouldLoad(true);
       return;
     }
 
-    // Create observer
     observerRef.current = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting) {
+          if (entry.isIntersecting && entry.intersectionRatio > 0) {
+            console.log("👁️ Image entering viewport:", src);
             setIsInView(true);
-            // Stop observing once in view
-            if (observerRef.current && imgRef.current) {
-              observerRef.current.unobserve(imgRef.current);
+
+            setTimeout(() => {
+              setShouldLoad(true);
+            }, 100);
+
+            if (observerRef.current && entry.target) {
+              observerRef.current.unobserve(entry.target);
             }
           }
         });
       },
       {
-        rootMargin: "50px", // Start loading 50px before entering viewport
-        threshold: 0.01,
+        root: null,
+        rootMargin: "0px",
+        threshold: 0.1,
       }
     );
 
-    // Start observing
+    // Mulai observe
     if (imgRef.current) {
       observerRef.current.observe(imgRef.current);
     }
@@ -58,39 +49,81 @@ export default function LazyImage({
         observerRef.current.disconnect();
       }
     };
-  }, []);
+  }, [src]);
 
   const handleImageLoad = () => {
+    console.log("✅ Image loaded:", src);
     setIsLoaded(true);
     if (onLoad) onLoad();
   };
 
+  const handleImageError = () => {
+    console.error("❌ Failed to load image:", src);
+    setIsLoaded(true); // Set loaded untuk remove skeleton
+  };
+
   return (
-    <div ref={imgRef} className={`relative overflow-hidden ${className}`}>
-      {/* Placeholder / Skeleton */}
+    <div
+      ref={imgRef}
+      className={`relative overflow-hidden bg-slate-200 ${className}`}
+    >
+      {/* Skeleton Loader */}
       {!isLoaded && (
-        <div className={`absolute inset-0 ${placeholderColor} animate-pulse`}>
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-200 via-slate-300 to-slate-200 animate-pulse">
+          {/* Shimmer effect */}
+          <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/40 to-transparent" />
         </div>
       )}
 
-      {/* Actual Image - only load when in view */}
-      {isInView && (
+      {/* Loading Spinner (saat sedang load) */}
+      {shouldLoad && !isLoaded && (
+        <div className="absolute inset-0 flex items-center justify-center bg-slate-100/50 backdrop-blur-sm">
+          <div className="relative">
+            <div className="w-10 h-10 border-4 border-slate-300 border-t-blue-600 rounded-full animate-spin" />
+            <div className="absolute inset-0 w-10 h-10 border-4 border-transparent border-r-blue-400 rounded-full animate-spin-slow" />
+          </div>
+        </div>
+      )}
+
+      {/* Actual Image - hanya render jika shouldLoad true */}
+      {shouldLoad && (
         <img
           src={src}
           alt={alt}
           onLoad={handleImageLoad}
+          onError={handleImageError}
           className={`
-            w-full h-full object-cover transition-opacity duration-500
+            w-full h-full object-cover
+            transition-opacity duration-700 ease-out
             ${isLoaded ? "opacity-100" : "opacity-0"}
           `}
+          loading="lazy"
         />
       )}
 
-      {/* Loading indicator */}
-      {isInView && !isLoaded && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+      {/* Debug indicator (hapus di production) */}
+      {process.env.NODE_ENV === "development" && (
+        <div className="absolute bottom-2 left-2 text-xs">
+          {!isInView && (
+            <span className="bg-red-500 text-white px-2 py-1 rounded">
+              Waiting
+            </span>
+          )}
+          {isInView && !shouldLoad && (
+            <span className="bg-yellow-500 text-white px-2 py-1 rounded">
+              In View
+            </span>
+          )}
+          {shouldLoad && !isLoaded && (
+            <span className="bg-blue-500 text-white px-2 py-1 rounded">
+              Loading...
+            </span>
+          )}
+          {isLoaded && (
+            <span className="bg-green-500 text-white px-2 py-1 rounded">
+              Loaded
+            </span>
+          )}
         </div>
       )}
     </div>

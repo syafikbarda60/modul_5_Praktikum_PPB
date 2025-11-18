@@ -1,6 +1,7 @@
 // src/components/home/FeaturedMakananSection.jsx
 import { Clock, Star, ChefHat } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
+import LazyImage from "../common/LazyImage";
 
 export default function FeaturedMakananSection({
   recipes,
@@ -112,7 +113,7 @@ export default function FeaturedMakananSection({
 
               {/* Recipe Image*/}
               <div className="relative h-32 md:h-56 overflow-hidden">
-                <img
+                <LazyImage
                   src={recipe.image_url}
                   alt={recipe.name}
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
